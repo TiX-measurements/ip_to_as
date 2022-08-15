@@ -26,6 +26,10 @@ def download_files(url:str, files:List[str], output_dir:Path, concurrency:int = 
 
     threads = []
     for i, file in enumerate(files, start=1):
+        if os.path.exists(output_dir/file):
+            print('skipping', file, 'because it already exists')
+            continue
+
         print('downloading', file)
         t = threading.Thread(target=_download, args=[file])
         t.start()
@@ -38,7 +42,7 @@ def download_files(url:str, files:List[str], output_dir:Path, concurrency:int = 
     [t.join() for t in threads]
 
 
-def download_prefix_to_AS_mappings(date:datetime.date, days:int = 30):
+def download_prefix_to_AS_mappings(date:datetime.date, days:int = 2):
     print('downloading prefix to AS')
     PREFIX_TO_AS_URL = 'https://publicdata.caida.org/datasets/routing/routeviews-prefix2as'
     DATE_FROM_FILE_RE = re.compile(r'routeviews-rv2-(\d{8})-\d+\.pfx2as\.gz')
@@ -194,8 +198,11 @@ def download_peering_db(date:datetime.date):
 
     DOWNLOAD_PATH = DOWNLOADS_PATH/'peering_db'
 
-    download_files(url=f'{URL}/{year}/{month}', files=files, output_dir=DOWNLOAD_PATH)
-    shutil.move(DOWNLOAD_PATH/get_last_file(DOWNLOAD_PATH), DOWNLOADS_PATH/'files'/'peeringdb.json')
+    # we only need the newest file, so we download that one
+    latest_file = list(sorted(files))[-1]
+
+    download_files(url=f'{URL}/{year}/{month}', files=[latest_file], output_dir=DOWNLOAD_PATH)
+    shutil.copy(DOWNLOAD_PATH/get_last_file(DOWNLOAD_PATH), DOWNLOADS_PATH/'files'/'peeringdb.json')
     
 
 import bz2
